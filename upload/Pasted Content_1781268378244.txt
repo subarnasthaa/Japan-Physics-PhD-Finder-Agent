@@ -1,0 +1,1551 @@
+can we do same for Germany,japan,Uk,australia and newzealand.
+1.for germany
+You are an expert Python developer and AI agent builder.
+
+Build a complete production-ready AI agent called "Germany Physics PhD Finder Agent"
+for a Nepali MSc Physics student from Tribhuvan University.
+
+═══════════════════════════════════════
+AGENT BEHAVIOR
+═══════════════════════════════════════
+
+Find ALL German universities AND ALL Max Planck Institutes AND ALL Helmholtz
+Centers AND ALL Leibniz Institutes offering Physics PhD positions.
+Do not limit results. Cover every institution.
+
+For each institution collect:
+- Institution name, city, type (University/MPI/Helmholtz/Leibniz)
+- Research group / department name and URL
+- PhD type: Structured (IMPRS/GRK) or Individual position
+- Application deadline or rolling admission
+- Contract type: TVöD E13 (65%) employment or fellowship/stipend
+- Monthly amount in EUR
+- Language: English / German / Both
+- Required documents
+- Notable supervisors and their research areas
+- Whether English is sufficient for daily lab life
+
+Also collect ALL DAAD scholarships relevant to physics and Nepali students
+
+═══════════════════════════════════════
+GITHUB REPO STRUCTURE
+═══════════════════════════════════════
+
+germany-phd-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── run_agent.yml
+│       ├── deadline_alert.yml
+│       └── manual_sync.yml
+│
+├── agents/
+│   └── germany_agent.py
+│
+├── scrapers/
+│   ├── imprs_scraper.py           ← All IMPRS programs from mpg.de
+│   ├── daad_scraper.py            ← DAAD scholarship database scraper
+│   ├── helmholtz_scraper.py       ← Helmholtz centers PhD positions
+│   └── academics_scraper.py       ← academics.de PhD job listings
+│
+├── sync/
+│   ├── sync_manager.py
+│   └── change_tracker.py
+│
+├── watchlist/
+│   ├── watchlist_manager.py
+│   └── watchlist.json
+│
+├── alerts/
+│   └── deadline_checker.py
+│
+├── prompts/
+│   └── germany_system_prompt.txt
+│
+├── outputs/
+│   ├── all_institutions.json
+│   ├── results_by_field/
+│   ├── watchlist_results.json
+│   ├── changes_log.json
+│   └── last_sync.txt
+│
+├── web/
+│   ├── index.html
+│   ├── watchlist.html
+│   ├── alerts.html
+│   └── js/
+│       ├── app.js
+│       ├── watchlist.js
+│       └── sync.js
+│
+├── config/
+│   └── settings.py
+│
+├── data/
+│   ├── german_physics_universities.json  ← Seed: all DFG-funded physics depts
+│   └── daad_programs.json               ← Seed: known DAAD scholarship programs
+│
+├── tests/
+│   ├── test_germany_agent.py
+│   ├── test_scrapers.py
+│   └── test_watchlist.py
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── app.py
+└── README.md
+
+═══════════════════════════════════════
+FILE DETAILS
+═══════════════════════════════════════
+
+app.py CLI flags:
+  python app.py --field "Condensed Matter"
+  python app.py --all-fields
+  python app.py --sync
+  python app.py --sync --delta
+  python app.py --sync --type "MPI"        ← sync only Max Planck institutes
+  python app.py --sync --type "Helmholtz"
+  python app.py --sync --english-only      ← sync only English-language positions
+  python app.py --watchlist add "TU Munich" "Condensed Matter"
+  python app.py --watchlist remove "TU Munich"
+  python app.py --watchlist show
+  python app.py --watchlist sync
+  python app.py --alerts
+  python app.py --daad                     ← show all DAAD scholarships
+
+scrapers/imprs_scraper.py:
+- Scrapes https://www.mpg.de/en/imprs
+- Gets ALL IMPRS programs with: name, field, institute, location, URL, deadline
+- Filters physics-related IMPRS programs
+
+scrapers/daad_scraper.py:
+- Scrapes DAAD scholarship database for programs open to Nepali students
+- Extracts: name, funding amount, duration, eligibility, deadline, URL
+- Saves to outputs/daad_scholarships.json
+
+scrapers/helmholtz_scraper.py:
+- Scrapes Helmholtz Association job portal for PhD positions in physics
+- URL: https://www.helmholtz.de/en/career/job-vacancies/
+- Extracts: position title, center name, field, deadline, contract type, URL
+
+scrapers/academics_scraper.py:
+- Scrapes academics.de for PhD physics positions in Germany
+- Returns: title, institution, city, field, salary, deadline, URL
+
+sync/sync_manager.py:
+- Same structure as USA agent
+- Additional methods:
+    sync_by_type(type: str) → filter by University/MPI/Helmholtz/Leibniz
+    sync_english_only() → filter positions where English is sufficient
+
+outputs/all_institutions.json schema:
+{
+  "country": "Germany",
+  "total_institutions": 0,
+  "last_sync": "",
+  "institutions": [
+    {
+      "id": "mpg-mpa-astrophysics",
+      "name": "Max Planck Institute for Astrophysics",
+      "city": "Garching",
+      "type": "Max Planck Institute",
+      "department_group": "",
+      "url": "",
+      "phd_type": "IMPRS | Individual Position | GRK",
+      "fields": [],
+      "deadline": "Rolling | specific date",
+      "contract": {
+        "type": "TVöD E13 | Fellowship | Stipend",
+        "monthly_eur": 1800,
+        "duration_years": 3
+      },
+      "language": {
+        "instruction": "English | German | Both",
+        "daily_lab": "English sufficient: true/false"
+      },
+      "required_documents": [],
+      "notable_supervisors": [],
+      "watchlisted": false,
+      "last_updated": "",
+      "notes_for_nepali_students": ""
+    }
+  ]
+}
+
+web/index.html:
+- Institution type filter tabs: All / University / MPI / Helmholtz / Leibniz
+- Language filter toggle: English-only button
+- Contract type filter: TVöD / Fellowship / Any
+- Monthly salary range slider
+- Sync button with last sync time
+- Change badges on updated cards
+- DAAD Scholarship section with expandable cards
+
+watchlist features same as USA agent plus:
+- Track position opening dates (some MPI positions open annually)
+- Email-style reminder text generator for watchlisted positions
+
+README.md sections:
+1. Project description
+2. All institution types covered (Uni, MPI, Helmholtz, Leibniz)
+3. TVöD salary explanation
+4. IMPRS programs explanation
+5. DAAD scholarship guide for Nepali students
+6. Sync and watchlist guide
+7. GitHub Actions + Pages setup
+8. API keys guide
+9. MIT License
+
+requirements.txt:
+anthropic
+tavily-python
+python-dotenv
+rich
+requests
+beautifulsoup4
+PyGithub
+
+Build every file completely. No placeholders.
+
+
+2.japan
+You are an expert Python developer and AI agent builder.
+
+Build a complete production-ready AI agent called "Japan Physics PhD Finder Agent"
+for a Nepali MSc Physics student from Tribhuvan University.
+
+═══════════════════════════════════════
+AGENT BEHAVIOR
+═══════════════════════════════════════
+
+Find ALL Japanese universities offering Physics PhD programs.
+Also include RIKEN, KEK, NIMS, and other national research institutes.
+Do not limit results. Cover every institution.
+
+For each institution collect:
+- University/institute name and city
+- Department and laboratory name and URL
+- Both intakes: April and October
+- English-taught program availability
+- Tuition (MEXT covers this)
+- HSK or JLPT requirements (if any)
+- Required documents
+- Notable professors and labs
+
+MEXT Scholarship complete info for Nepali students
+JSPS fellowships
+Any RIKEN Junior Research Associate positions
+
+═══════════════════════════════════════
+GITHUB REPO STRUCTURE
+═══════════════════════════════════════
+
+japan-phd-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── run_agent.yml
+│       ├── deadline_alert.yml
+│       └── manual_sync.yml
+│
+├── agents/
+│   └── japan_agent.py
+│
+├── scrapers/
+│   ├── mext_scraper.py            ← MEXT scholarship page + deadlines
+│   ├── jrecin_scraper.py          ← JREC-IN Portal: all physics PhD positions
+│   ├── riken_scraper.py           ← RIKEN Junior Research Associate program
+│   └── jsps_scraper.py            ← JSPS fellowship listings
+│
+├── sync/
+│   ├── sync_manager.py
+│   └── change_tracker.py
+│
+├── watchlist/
+│   ├── watchlist_manager.py
+│   └── watchlist.json
+│
+├── alerts/
+│   └── deadline_checker.py
+│
+├── prompts/
+│   └── japan_system_prompt.txt
+│
+├── outputs/
+│   ├── all_universities.json
+│   ├── results_by_field/
+│   ├── watchlist_results.json
+│   ├── changes_log.json
+│   ├── mext_info.json             ← Current MEXT scholarship details
+│   └── last_sync.txt
+│
+├── web/
+│   ├── index.html
+│   ├── watchlist.html
+│   ├── alerts.html
+│   ├── mext_guide.html            ← Dedicated MEXT guide page for Nepali students
+│   └── js/
+│       ├── app.js
+│       ├── watchlist.js
+│       └── sync.js
+│
+├── config/
+│   └── settings.py
+│
+├── data/
+│   ├── japanese_universities.json     ← All Japanese national/private universities
+│   ├── japanese_embassy_nepal.json    ← Embassy contact and MEXT links
+│   └── riken_institutes.json          ← All RIKEN institutes and fields
+│
+├── tests/
+│   ├── test_japan_agent.py
+│   ├── test_scrapers.py
+│   └── test_watchlist.py
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── app.py
+└── README.md
+
+═══════════════════════════════════════
+FILE DETAILS
+═══════════════════════════════════════
+
+app.py CLI flags:
+  python app.py --field "Astrophysics"
+  python app.py --all-fields
+  python app.py --sync
+  python app.py --sync --delta
+  python app.py --sync --english-only
+  python app.py --sync --april            ← April intake only
+  python app.py --sync --october          ← October intake only
+  python app.py --watchlist add "University of Tokyo" "Astrophysics"
+  python app.py --watchlist remove "University of Tokyo"
+  python app.py --watchlist show
+  python app.py --watchlist sync
+  python app.py --alerts
+  python app.py --mext                    ← Show full MEXT guide
+  python app.py --riken                   ← Show RIKEN positions
+
+scrapers/jrecin_scraper.py:
+- Scrapes https://jrecin.jst.go.jp (Japan's academic job portal)
+- Searches for physics PhD positions and research student positions
+- Returns: title, institution, field, deadline, English OK flag, URL
+- This is the most comprehensive source for Japanese academic positions
+
+scrapers/riken_scraper.py:
+- Scrapes RIKEN Junior Research Associate (JRA) program
+- Returns: institute, field, supervisor, stipend, application period, URL
+- JRA is excellent for physics students, provides ¥200,000+/month
+
+scrapers/jsps_scraper.py:
+- Scrapes JSPS fellowship opportunities for international students
+- DC1/DC2 fellowships for enrolled PhD students
+- Returns: fellowship name, amount, duration, eligibility, deadline, URL
+
+web/mext_guide.html:
+- Complete step-by-step MEXT application guide for Nepali students
+- Embassy of Japan Nepal contact: Panipokhari, Kathmandu
+- Timeline calendar: when to start preparing (12 months before)
+- Document checklist with download links
+- FAQ section
+- Links to past successful applicants' blogs
+
+outputs/all_universities.json schema:
+{
+  "country": "Japan",
+  "total_institutions": 0,
+  "last_sync": "",
+  "universities": [
+    {
+      "id": "utokyo-astrophysics",
+      "name": "University of Tokyo",
+      "city": "Tokyo",
+      "type": "National University | Private University | Research Institute",
+      "department_lab": "",
+      "url": "",
+      "fields": [],
+      "intake": {
+        "april": true,
+        "october": true,
+        "april_deadline": "",
+        "october_deadline": ""
+      },
+      "english_program": true,
+      "tuition_jpy": 535800,
+      "language_requirements": {
+        "jlpt_required": false,
+        "english_test": "TOEFL/IELTS"
+      },
+      "mext_designated": true,
+      "required_documents": [],
+      "notable_professors": [],
+      "riken_affiliated": false,
+      "watchlisted": false,
+      "last_updated": "",
+      "notes_for_nepali_students": ""
+    }
+  ]
+}
+
+web/index.html:
+- MEXT Scholarship banner at top linking to mext_guide.html
+- Filter: intake month (April/October), English only, MEXT designated
+- RIKEN positions section
+- Sync button + last sync time
+- Deadline countdown for both intakes
+
+README.md sections:
+1. Project description
+2. All sources: universities, RIKEN, JREC-IN, JSPS
+3. MEXT guide link and Embassy Nepal info
+4. April vs October intake calendar
+5. Sync and watchlist guide
+6. GitHub Actions + Pages setup
+7. API keys guide
+8. MIT License
+
+requirements.txt:
+anthropic
+tavily-python
+python-dotenv
+rich
+requests
+beautifulsoup4
+PyGithub
+
+Build every file completely. No placeholders.
+
+3.Uk
+You are an expert Python developer and AI agent builder.
+
+Build a complete production-ready AI agent called "UK Physics PhD Finder Agent"
+for a Nepali MSc Physics student from Tribhuvan University.
+
+═══════════════════════════════════════
+AGENT BEHAVIOR
+═══════════════════════════════════════
+
+Find ALL UK universities offering Physics PhD programs.
+Also scrape FindAPhD.com for all currently advertised funded positions.
+Do not limit results. Cover every institution.
+
+For each institution collect:
+- University name and city
+- Department and research group and URL
+- Both intakes: October and January
+- International tuition per year (GBP)
+- Funding: EPSRC / university / Commonwealth / self-funded
+- IELTS minimum score
+- Required documents
+- Notable supervisors
+
+Commonwealth Scholarship full guide for Nepali students via UGC Nepal
+Live funded positions from FindAPhD.com
+Newton Fund and British Council opportunities
+
+═══════════════════════════════════════
+GITHUB REPO STRUCTURE
+═══════════════════════════════════════
+
+uk-phd-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── run_agent.yml
+│       ├── deadline_alert.yml
+│       └── manual_sync.yml
+│
+├── agents/
+│   └── uk_agent.py
+│
+├── scrapers/
+│   ├── findaphd_scraper.py        ← All funded physics PhD positions
+│   ├── epsrc_scraper.py           ← EPSRC DTP/CDT funded programs
+│   ├── commonwealth_scraper.py    ← Commonwealth Scholarship deadlines via UGC
+│   └── prospects_scraper.py       ← prospects.ac.uk PhD listings
+│
+├── sync/
+│   ├── sync_manager.py
+│   └── change_tracker.py
+│
+├── watchlist/
+│   ├── watchlist_manager.py
+│   └── watchlist.json
+│
+├── alerts/
+│   └── deadline_checker.py
+│
+├── prompts/
+│   └── uk_system_prompt.txt
+│
+├── outputs/
+│   ├── all_universities.json
+│   ├── live_positions.json        ← Current FindAPhD funded positions
+│   ├── results_by_field/
+│   ├── watchlist_results.json
+│   ├── changes_log.json
+│   ├── commonwealth_info.json     ← Current Commonwealth scholarship info
+│   └── last_sync.txt
+│
+├── web/
+│   ├── index.html
+│   ├── watchlist.html
+│   ├── alerts.html
+│   ├── live_positions.html        ← Live funded positions page (updated daily)
+│   ├── commonwealth_guide.html    ← Full guide for Nepali students via UGC
+│   └── js/
+│       ├── app.js
+│       ├── watchlist.js
+│       └── sync.js
+│
+├── config/
+│   └── settings.py
+│
+├── data/
+│   ├── uk_universities.json           ← All UK universities with physics depts
+│   ├── epsrc_dtp_universities.json    ← All EPSRC DTP partner universities
+│   └── commonwealth_nepal.json        ← UGC Nepal contact, CSC UK links
+│
+├── tests/
+│   ├── test_uk_agent.py
+│   ├── test_scrapers.py
+│   └── test_watchlist.py
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── app.py
+└── README.md
+
+═══════════════════════════════════════
+FILE DETAILS
+═══════════════════════════════════════
+
+app.py CLI flags:
+  python app.py --field "Astrophysics"
+  python app.py --all-fields
+  python app.py --sync
+  python app.py --sync --delta
+  python app.py --sync --funded-only      ← Only funded positions
+  python app.py --sync --epsrc-only       ← Only EPSRC DTP universities
+  python app.py --live                    ← Fetch live FindAPhD positions
+  python app.py --watchlist add "Imperial College" "Astrophysics"
+  python app.py --watchlist remove "Imperial College"
+  python app.py --watchlist show
+  python app.py --watchlist sync
+  python app.py --alerts
+  python app.py --commonwealth            ← Show Commonwealth guide
+
+scrapers/findaphd_scraper.py:
+- Scrapes https://www.findaphd.com/phds/?Keywords=physics&country=GB&funding=true
+- Gets ALL funded physics PhD positions currently advertised
+- Extracts: title, university, supervisor, field, deadline, stipend, URL
+- Run daily via deadline_alert.yml to catch new positions
+- Saves to outputs/live_positions.json
+
+scrapers/epsrc_scraper.py:
+- Scrapes EPSRC DTP (Doctoral Training Partnership) and CDT programs
+- Gets all physics-related DTP partner universities
+- Returns: university, DTP name, fields covered, number of studentships, URL
+- EPSRC studentships cover: fees + ~£19,237/year stipend (2025 rate)
+
+scrapers/commonwealth_scraper.py:
+- Monitors UGC Nepal website for Commonwealth Scholarship announcement
+- Returns: current year status (open/closed), deadline, required docs, URL
+- Falls back to CSC UK website if UGC page not updated
+
+web/live_positions.html:
+- Updated daily via GitHub Actions
+- Shows all current funded positions from FindAPhD
+- Filter by field, university, deadline
+- "New Today" badge for positions added in last 24 hours
+- Direct apply link for each position
+- Sort by deadline (soonest first)
+
+web/commonwealth_guide.html:
+- Complete guide for Nepali students:
+  Step 1: Check UGC Nepal announcement (ugcnepal.edu.np)
+  Step 2: Get UGC endorsement letter
+  Step 3: Apply on CSC UK portal
+  Step 4: Get university offer letter
+  Step 5: Final scholarship confirmation
+- Documents needed: passport, degree certificates, transcripts,
+  research proposal, 2 references, medical certificate,
+  IELTS (min 6.5), UGC endorsement letter
+- Coverage: return flights + full tuition + £1,347/month stipend
+  + warm clothing allowance + thesis grant + study travel grant
+- UGC Nepal: Sanothimi, Bhaktapur | ugcnepal.edu.np
+
+outputs/all_universities.json schema:
+{
+  "country": "UK",
+  "total_universities": 0,
+  "last_sync": "",
+  "universities": [
+    {
+      "id": "imperial-astrophysics",
+      "name": "Imperial College London",
+      "city": "London",
+      "department_group": "",
+      "url": "",
+      "fields": [],
+      "deadlines": {
+        "october_intake": "",
+        "january_intake": ""
+      },
+      "international_tuition_gbp": 0,
+      "funding": {
+        "epsrc_dtp": true,
+        "commonwealth_eligible": true,
+        "university_scholarships": [],
+        "self_funded_accepted": true
+      },
+      "ielts_minimum": 6.5,
+      "required_documents": [],
+      "notable_supervisors": [],
+      "live_positions_count": 0,
+      "watchlisted": false,
+      "last_updated": "",
+      "notes_for_nepali_students": ""
+    }
+  ]
+}
+
+.github/workflows/run_agent.yml:
+- Cron: Monday 08:00 UTC (full sync)
+- Also triggers findaphd_scraper daily at 07:00 UTC for live positions
+
+web/index.html:
+- Commonwealth Scholarship banner → commonwealth_guide.html
+- Live Positions tab with count badge (updated daily)
+- Filter: funded only toggle, EPSRC DTP filter, field filter
+- IELTS requirement prominently shown
+- Sync button + last sync time
+
+README.md sections:
+1. Project description
+2. Data sources: FindAPhD, EPSRC, prospects.ac.uk
+3. Commonwealth Scholarship via UGC Nepal — step by step
+4. Live funded positions feature
+5. Sync and watchlist guide
+6. GitHub Actions + Pages setup (including daily live sync)
+7. API keys guide
+8. MIT License
+
+requirements.txt:
+anthropic
+tavily-python
+python-dotenv
+rich
+requests
+beautifulsoup4
+PyGithub
+
+Build every file completely. No placeholders.
+
+4.australia
+You are an expert Python developer and AI agent builder.
+
+Build a complete production-ready AI agent called "Australia Physics PhD Finder Agent"
+for a Nepali MSc Physics student from Tribhuvan University.
+
+═══════════════════════════════════════
+AGENT BEHAVIOR
+═══════════════════════════════════════
+
+Find ALL Australian universities offering Physics PhD programs.
+Also include CSIRO (Commonwealth Scientific and Industrial Research Organisation)
+and ANSTO (Australian Nuclear Science and Technology Organisation) positions.
+Do not limit results. Cover every institution.
+
+For each institution collect:
+- University name and state/city
+- Department and research group and URL
+- Application deadlines (Australia has rolling admissions mostly)
+- International tuition per year (AUD)
+- Funding: RTP scholarship, university scholarship, APA, self-funded
+- IELTS minimum score (usually 6.5)
+- Required documents
+- Notable supervisors and their research areas
+- Whether they have COE (Confirmation of Enrollment) process info
+
+Also collect:
+- Australia Awards Scholarship (fully funded, Nepal eligible)
+- RTP (Research Training Program) scholarship details
+- Endeavour Leadership Program
+- University-specific international scholarships
+- CSIRO PhD top-up scholarships
+
+Physics fields supported:
+Astrophysics, Condensed Matter, Quantum Mechanics, Particle Physics,
+Biophysics, AMO Physics, Geophysics, Optics, Nuclear Physics, Computational Physics
+
+Prioritize: Australia Awards > RTP funded > university funded > self-funded
+
+═══════════════════════════════════════
+GITHUB REPO STRUCTURE
+═══════════════════════════════════════
+
+australia-phd-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── run_agent.yml          ← Weekly full sync Monday 08:00 UTC
+│       ├── deadline_alert.yml     ← Daily deadline checker → GitHub Issues
+│       └── manual_sync.yml        ← Manual trigger with field input
+│
+├── agents/
+│   └── australia_agent.py         ← Main agent: search ALL universities
+│
+├── scrapers/
+│   ├── seek_research_scraper.py   ← seekresearch.com.au PhD listings
+│   ├── csiro_scraper.py           ← CSIRO studentship and top-up scholarships
+│   ├── ansto_scraper.py           ← ANSTO PhD program listings
+│   └── australia_awards_scraper.py ← Australia Awards deadlines for Nepal
+│
+├── sync/
+│   ├── sync_manager.py
+│   └── change_tracker.py
+│
+├── watchlist/
+│   ├── watchlist_manager.py
+│   └── watchlist.json
+│
+├── alerts/
+│   └── deadline_checker.py
+│
+├── prompts/
+│   └── australia_system_prompt.txt
+│
+├── outputs/
+│   ├── all_universities.json
+│   ├── results_by_field/
+│   │   ├── astrophysics.json
+│   │   ├── condensed_matter.json
+│   │   └── ... (one per field)
+│   ├── live_positions.json        ← Current CSIRO/ANSTO/university positions
+│   ├── watchlist_results.json
+│   ├── changes_log.json
+│   ├── australia_awards_info.json ← Current Australia Awards details
+│   └── last_sync.txt
+│
+├── web/
+│   ├── index.html                 ← Main UI: all universities
+│   ├── watchlist.html
+│   ├── alerts.html
+│   ├── live_positions.html        ← CSIRO + ANSTO + university positions
+│   ├── australia_awards_guide.html ← Full guide for Nepali students
+│   └── js/
+│       ├── app.js
+│       ├── watchlist.js
+│       └── sync.js
+│
+├── config/
+│   └── settings.py
+│
+├── data/
+│   ├── australian_universities.json     ← All Go8 + other universities
+│   ├── csiro_divisions.json             ← All CSIRO divisions with physics links
+│   └── australia_awards_nepal.json      ← Australia Awards Nepal office contact
+│
+├── tests/
+│   ├── test_australia_agent.py
+│   ├── test_scrapers.py
+│   └── test_watchlist.py
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── app.py
+└── README.md
+
+═══════════════════════════════════════
+FILE DETAILS
+═══════════════════════════════════════
+
+app.py CLI flags:
+  python app.py --field "Astrophysics"
+  python app.py --all-fields
+  python app.py --sync
+  python app.py --sync --delta
+  python app.py --sync --rtp-only         ← Only RTP funded positions
+  python app.py --sync --csiro            ← Include CSIRO positions
+  python app.py --sync --go8-only         ← Only Group of Eight universities
+  python app.py --sync --english-only
+  python app.py --live                    ← Fetch live positions
+  python app.py --watchlist add "ANU" "Astrophysics"
+  python app.py --watchlist remove "ANU"
+  python app.py --watchlist show
+  python app.py --watchlist sync
+  python app.py --alerts
+  python app.py --australia-awards        ← Show Australia Awards guide
+
+data/australian_universities.json:
+- Seed list of ALL Australian universities with physics departments:
+  Group of Eight (Go8):
+    ANU (Canberra), University of Melbourne, University of Sydney,
+    UNSW Sydney, University of Queensland, Monash University,
+    University of Adelaide, University of Western Australia
+  Other universities:
+    Curtin University, Macquarie University, Swinburne University,
+    University of Tasmania, La Trobe University, Flinders University,
+    University of Newcastle, Griffith University, James Cook University,
+    University of Wollongong, Western Sydney University, RMIT University,
+    Queensland University of Technology, Deakin University
+  Each entry: {name, city, state, physics_dept_url, go8: true/false}
+
+data/australia_awards_nepal.json:
+{
+  "scheme_name": "Australia Awards Scholarships",
+  "managing_body": "Australian High Commission Nepal",
+  "office_address": "Bansbari, Kathmandu, Nepal",
+  "website": "https://www.australiaawardsnepali.org.np",
+  "australia_awards_portal": "https://www.australiaawards.gov.au",
+  "coverage": {
+    "tuition": "Full waiver",
+    "return_airfare": true,
+    "establishment_allowance": true,
+    "monthly_stipend_aud": 3000,
+    "overseas_student_health_cover": true,
+    "pre_course_english": true
+  },
+  "typical_deadline": "April 30 (check annually)",
+  "eligibility": [
+    "Nepali citizen",
+    "Not hold Australian permanent residency",
+    "Met English requirements",
+    "Demonstrated leadership potential",
+    "Committed to development of Nepal"
+  ],
+  "note": "One of easiest fully funded scholarships for Nepali students"
+}
+
+data/csiro_divisions.json:
+- All CSIRO divisions relevant to physics:
+  Astronomy and Space Science, Materials Science, Energy, Environment,
+  Health and Biosecurity, Information Management and Technology
+- Each: {division, location, physics_relevance, phd_topup_available, url}
+
+scrapers/seek_research_scraper.py:
+- Scrapes https://www.seek.com.au/jobs/in-All-Australia?keywords=phd+physics
+- Also scrapes https://jobs.ac.uk for Australian physics positions
+- Returns: title, university, field, stipend, deadline, URL
+
+scrapers/csiro_scraper.py:
+- Scrapes CSIRO careers page for PhD studentships and top-up scholarships
+- CSIRO top-up: ~AUD $7,000-10,000/year on top of RTP stipend
+- Returns: project title, division, supervisor, top-up amount, URL
+
+scrapers/ansto_scraper.py:
+- Scrapes ANSTO graduate research portal
+- Returns: project, field, supervisor, stipend, deadline, URL
+- ANSTO strong in: nuclear physics, materials science, neutron scattering
+
+scrapers/australia_awards_scraper.py:
+- Monitors australiaawardsnepali.org.np for annual announcement
+- Returns: current year status (open/closed), deadline, document list
+- Falls back to australiaawards.gov.au if Nepal page not updated
+
+sync/sync_manager.py:
+- SyncManager class:
+    full_sync(fields)
+    delta_sync()
+    sync_go8_only()
+    sync_csiro()
+    get_last_sync_time()
+    update_last_sync_time()
+    merge_results(old, new)
+
+sync/change_tracker.py:
+- Detects changes: new university, deadline updated, funding changed,
+  new CSIRO position added, Australia Awards deadline announced
+- Saves to outputs/changes_log.json
+
+watchlist/watchlist_manager.py:
+- Add/remove/show universities
+- watchlist.json schema:
+  {
+    "watchlist": [
+      {
+        "university": "ANU",
+        "field": "Astrophysics",
+        "added_date": "",
+        "last_checked": "",
+        "deadline": "Rolling",
+        "funding_type": "RTP | Australia Awards | University",
+        "rtp_stipend_aud": 32192,
+        "status": "Open | Closed | Unknown",
+        "notes": ""
+      }
+    ]
+  }
+
+alerts/deadline_checker.py:
+- Reads all_universities.json + australia_awards_info.json
+- Creates GitHub Issues for deadlines within 30 days
+- Special alert for Australia Awards opening (very important for Nepali students)
+- Issue format: "⚠️ Deadline: ANU Astrophysics PhD - Rolling | Australia Awards Opens"
+
+agents/australia_agent.py:
+- Class: AustraliaAgent
+- Method: search(field: str) -> dict
+- Search queries:
+    "{field} physics PhD Australia 2025 RTP scholarship international"
+    "Australia Awards scholarship physics Nepal 2025"
+    "CSIRO PhD studentship {field} physics 2025"
+    "ANSTO graduate research {field} physics"
+    "{field} physics PhD ANU Melbourne Sydney UNSW Monash 2025"
+- Combines Tavily results + all scrapers
+- Claude processes and returns JSON
+
+prompts/australia_system_prompt.txt:
+- Instructs Claude to return ONLY valid JSON with schema:
+  {
+    "country": "Australia",
+    "field": "<field>",
+    "last_updated": "<date>",
+    "universities": [
+      {
+        "rank_order": 1,
+        "name": "",
+        "state": "",
+        "city": "",
+        "group_of_eight": true,
+        "department_group": "",
+        "url": "",
+        "fields": [],
+        "admission": "Rolling | Semester-based",
+        "deadlines": {
+          "semester1_feb": "",
+          "semester2_jul": "",
+          "rolling": true
+        },
+        "international_tuition_aud_per_year": 0,
+        "funding": {
+          "rtp_available": true,
+          "rtp_stipend_aud": 32192,
+          "university_scholarship": "",
+          "australia_awards_eligible": true,
+          "csiro_topup": false
+        },
+        "ielts_minimum": 6.5,
+        "required_documents": [],
+        "notable_supervisors": [
+          {"name": "", "research_area": "", "profile_url": ""}
+        ],
+        "coe_info": "",
+        "watchlisted": false,
+        "last_updated": "",
+        "notes_for_nepali_students": ""
+      }
+    ],
+    "csiro_positions": [
+      {
+        "title": "",
+        "division": "",
+        "location": "",
+        "topup_aud": 0,
+        "deadline": "",
+        "url": ""
+      }
+    ],
+    "ansto_positions": [
+      {
+        "title": "",
+        "field": "",
+        "stipend_aud": 0,
+        "deadline": "",
+        "url": ""
+      }
+    ],
+    "scholarships": [
+      {
+        "name": "Australia Awards | RTP | University",
+        "amount_aud": 0,
+        "eligibility": "",
+        "deadline": "",
+        "url": "",
+        "nepal_specific_notes": ""
+      }
+    ]
+  }
+
+web/index.html:
+- Australia Awards banner at top → australia_awards_guide.html
+- Filter panel:
+    * Field dropdown
+    * Funding type: RTP / Australia Awards / University / Any
+    * Go8 only toggle
+    * State filter (NSW, VIC, QLD, WA, SA, ACT, TAS)
+    * Sort: deadline / stipend amount / name
+- University cards: name, state, field, RTP badge, deadline, watchlist button
+- CSIRO/ANSTO positions section
+- Sync button + last sync timestamp
+- Change badges
+
+web/australia_awards_guide.html:
+- Complete step-by-step Australia Awards guide for Nepali students:
+  Step 1: Check australiaawardsnepali.org.np (opens ~February)
+  Step 2: Prepare documents (passport, transcripts, English test,
+          statement of purpose, 2 referees, leadership evidence)
+  Step 3: Submit online application before April 30
+  Step 4: Shortlisting and interview (June-August)
+  Step 5: Final award notification (October-November)
+  Step 6: Pre-departure briefing and departure (January-February next year)
+- Coverage details with AUD amounts
+- Australian High Commission Nepal contact: Bansbari, Kathmandu
+- Tips for strong application (leadership focus, development impact)
+- FAQ section
+
+web/live_positions.html:
+- All current CSIRO + ANSTO + advertised university positions
+- Updated weekly
+- Filter by state, field, stipend amount
+- New positions badge
+
+web/watchlist.html:
+- All watchlisted universities with:
+  - RTP stipend amount shown
+  - Rolling vs fixed deadline indicator
+  - "Apply Now" direct link
+  - Remove button
+  - Notes field (editable)
+
+.github/workflows/run_agent.yml:
+- Cron: Monday 08:00 UTC
+- Steps: checkout, python 3.11, pip install -r requirements.txt,
+  python app.py --all-fields --sync,
+  git config, git add outputs/, git commit, git push
+- Secrets: ANTHROPIC_API_KEY, TAVILY_API_KEY, GITHUB_TOKEN
+
+.github/workflows/deadline_alert.yml:
+- Cron: daily 06:00 UTC
+- Runs: python -m alerts.deadline_checker
+- Uses GITHUB_TOKEN to create issues
+- Special check: monitor australiaawardsnepali.org.np for new announcement
+
+.github/workflows/manual_sync.yml:
+- workflow_dispatch with inputs:
+    field: string (optional)
+    sync_type: choice (full / delta / csiro / go8)
+- Runs appropriate app.py command based on inputs
+
+config/settings.py:
+- ANTHROPIC_API_KEY, TAVILY_API_KEY from .env
+- SUPPORTED_FIELDS = [10 physics fields]
+- GO8_UNIVERSITIES = [list of 8]
+- OUTPUT_DIR, WEB_DIR paths
+- MODEL = "claude-sonnet-4-6"
+- RTP_STIPEND_2025 = 32192  ← Update annually
+- GITHUB_TOKEN for issue creation
+
+tests/test_australia_agent.py:
+- Test search() returns valid JSON schema
+- Test all 10 fields return results
+- Test funding type filtering works
+
+tests/test_scrapers.py:
+- Test each scraper returns non-empty list
+- Test CSIRO scraper finds at least 1 position
+- Test Australia Awards scraper returns deadline info
+
+tests/test_watchlist.py:
+- Test add/remove/show operations
+- Test watchlist.json persistence
+- Test sync runs only for watchlisted universities
+
+README.md:
+1. Project title and description
+2. What this agent covers:
+   - All Australian universities (Go8 + others, 25+ total)
+   - CSIRO studentships and top-up scholarships
+   - ANSTO graduate research positions
+   - Australia Awards (most important for Nepali students)
+   - RTP scholarship details
+3. Features:
+   - All universities (no limit)
+   - Weekly auto sync via GitHub Actions
+   - Delta sync (only fetch changes)
+   - Watchlist with deadline tracking
+   - Deadline alerts via GitHub Issues
+   - Change tracker
+   - Live CSIRO/ANSTO positions
+   - GitHub Pages web UI
+4. Setup:
+   a. git clone https://github.com/yourusername/australia-phd-agent
+   b. cd australia-phd-agent
+   c. pip install -r requirements.txt
+   d. cp .env.example .env
+   e. Add ANTHROPIC_API_KEY and TAVILY_API_KEY to .env
+   f. python app.py --field "Astrophysics"
+5. CLI usage with all flags and examples
+6. Watchlist guide with examples
+7. GitHub Actions setup:
+   - Go to repo Settings > Secrets > Actions
+   - Add: ANTHROPIC_API_KEY, TAVILY_API_KEY, GITHUB_TOKEN
+   - Workflows run automatically every Monday
+8. GitHub Pages setup:
+   - Go to repo Settings > Pages
+   - Source: Deploy from branch: main, folder: /web
+   - Access at: https://yourusername.github.io/australia-phd-agent
+9. Australia Awards guide for Nepali students
+10. Data sources: seekresearch, CSIRO, ANSTO, australiaawards
+11. How to get free API keys:
+    - Tavily: https://tavily.com (1000 searches/month free)
+    - Anthropic: https://console.anthropic.com
+12. Contributing guide
+13. MIT License
+
+requirements.txt:
+anthropic
+tavily-python
+python-dotenv
+rich
+requests
+beautifulsoup4
+PyGithub
+
+Build every single file with complete working code. No placeholders.
+No comments saying "add logic here". Every function must be implemented.
+
+5.Newzealand
+You are an expert Python developer and AI agent builder.
+
+Build a complete production-ready AI agent called "New Zealand Physics PhD Finder Agent"
+for a Nepali MSc Physics student from Tribhuvan University.
+
+═══════════════════════════════════════
+AGENT BEHAVIOR
+═══════════════════════════════════════
+
+Find ALL New Zealand universities offering Physics PhD programs.
+Also include GNS Science, ESR, and MacDiarmid Institute positions.
+Do not limit results. Cover every institution.
+
+For each institution collect:
+- University name and city
+- Department and research group and URL
+- Application deadlines (NZ has mostly rolling admissions)
+- International tuition per year (NZD)
+- Funding: Doctoral Scholarship, university scholarship, self-funded
+- IELTS minimum (usually 6.5)
+- Required documents
+- Notable supervisors
+
+Also collect:
+- New Zealand Commonwealth Scholarships
+- NZ ASEAN Scholarship (Nepal eligible)
+- Manaaki New Zealand Scholarships (fully funded, Nepal eligible)
+- University-specific doctoral scholarships
+- MacDiarmid Institute PhD scholarships
+
+Physics fields supported:
+Astrophysics, Condensed Matter, Quantum Mechanics, Particle Physics,
+Biophysics, AMO Physics, Geophysics, Optics, Nuclear Physics, Computational Physics
+
+Prioritize: Manaaki NZ Scholarship > university doctoral > self-funded
+
+═══════════════════════════════════════
+GITHUB REPO STRUCTURE
+═══════════════════════════════════════
+
+newzealand-phd-agent/
+│
+├── .github/
+│   └── workflows/
+│       ├── run_agent.yml          ← Weekly full sync Monday 08:00 UTC
+│       ├── deadline_alert.yml     ← Daily deadline checker → GitHub Issues
+│       └── manual_sync.yml        ← Manual trigger
+│
+├── agents/
+│   └── nz_agent.py                ← Main agent: search ALL universities
+│
+├── scrapers/
+│   ├── scholarshipsnz_scraper.py  ← scholarships.govt.nz listings
+│   ├── macdiarmidinst_scraper.py  ← MacDiarmid Institute PhD positions
+│   ├── gns_scraper.py             ← GNS Science graduate positions
+│   └── manaaki_scraper.py         ← Manaaki NZ Scholarship deadlines
+│
+├── sync/
+│   ├── sync_manager.py
+│   └── change_tracker.py
+│
+├── watchlist/
+│   ├── watchlist_manager.py
+│   └── watchlist.json
+│
+├── alerts/
+│   └── deadline_checker.py
+│
+├── prompts/
+│   └── nz_system_prompt.txt
+│
+├── outputs/
+│   ├── all_universities.json
+│   ├── results_by_field/
+│   │   ├── astrophysics.json
+│   │   └── ... (one per field)
+│   ├── live_positions.json        ← MacDiarmid + GNS + university positions
+│   ├── watchlist_results.json
+│   ├── changes_log.json
+│   ├── manaaki_info.json          ← Current Manaaki NZ scholarship details
+│   └── last_sync.txt
+│
+├── web/
+│   ├── index.html
+│   ├── watchlist.html
+│   ├── alerts.html
+│   ├── live_positions.html
+│   ├── manaaki_guide.html         ← Full Manaaki NZ guide for Nepali students
+│   └── js/
+│       ├── app.js
+│       ├── watchlist.js
+│       └── sync.js
+│
+├── config/
+│   └── settings.py
+│
+├── data/
+│   ├── nz_universities.json            ← All NZ universities with physics depts
+│   ├── macdiarmidinstitute_nodes.json  ← All MacDiarmid node universities
+│   └── manaaki_nepal.json             ← Manaaki NZ + NZ High Commission Nepal
+│
+├── tests/
+│   ├── test_nz_agent.py
+│   ├── test_scrapers.py
+│   └── test_watchlist.py
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+├── app.py
+└── README.md
+
+═══════════════════════════════════════
+FILE DETAILS
+═══════════════════════════════════════
+
+app.py CLI flags:
+  python app.py --field "Quantum Mechanics"
+  python app.py --all-fields
+  python app.py --sync
+  python app.py --sync --delta
+  python app.py --sync --funded-only
+  python app.py --sync --macdiarmidinst  ← Only MacDiarmid Institute positions
+  python app.py --sync --gns             ← Include GNS Science positions
+  python app.py --live                   ← Fetch live positions
+  python app.py --watchlist add "University of Auckland" "Quantum Mechanics"
+  python app.py --watchlist remove "University of Auckland"
+  python app.py --watchlist show
+  python app.py --watchlist sync
+  python app.py --alerts
+  python app.py --manaaki                ← Show Manaaki NZ Scholarship guide
+
+data/nz_universities.json:
+- ALL New Zealand universities with physics departments:
+  University of Auckland (Auckland) — largest, strong physics dept
+  Victoria University of Wellington (Wellington) — strong condensed matter
+  University of Canterbury (Christchurch) — strong astrophysics
+  University of Otago (Dunedin) — strong quantum optics
+  Massey University (Palmerston North/Auckland) — strong applied physics
+  AUT (Auckland) — applied sciences
+  Lincoln University (Canterbury) — environmental physics
+  University of Waikato (Hamilton) — materials science
+  Each entry: {name, city, physics_dept_url, macdiarmidinstitute_node: true/false,
+               doctoral_scholarship_amount_nzd, rolling_admission: true}
+
+data/manaaki_nepal.json:
+{
+  "scheme_name": "Manaaki New Zealand Scholarships",
+  "managing_body": "New Zealand High Commission Nepal",
+  "office_address": "Kathmandu, Nepal",
+  "website": "https://www.mfat.govt.nz/en/aid-and-development/new-zealand-scholarships",
+  "nz_scholarships_portal": "https://www.nzscholarships.govt.nz",
+  "coverage": {
+    "tuition": "Full waiver",
+    "return_airfare": true,
+    "establishment_allowance_nzd": 3000,
+    "monthly_stipend_nzd": 1500,
+    "health_insurance": true,
+    "pre_departure_orientation": true
+  },
+  "typical_deadline": "March (check annually at nzscholarships.govt.nz)",
+  "eligibility": [
+    "Nepali citizen",
+    "Not NZ citizen or permanent resident",
+    "Strong academic record",
+    "Demonstrated leadership",
+    "Committed to applying skills in Nepal after return"
+  ],
+  "note": "Fully funded, highly competitive, specifically for developing countries"
+}
+
+data/macdiarmidinstitute_nodes.json:
+- MacDiarmid Institute is NZ's premier materials science and nanotechnology institute
+- Node universities: Victoria University of Wellington (lead), University of Auckland,
+  University of Canterbury, University of Otago, Massey University, AUT
+- PhD scholarships: NZD $27,000/year stipend + fees
+- Research areas: quantum materials, nanomaterials, biomaterials, energy materials
+- Each node: {university, city, research_focus, supervisor_count, phd_url}
+
+scrapers/scholarshipsnz_scraper.py:
+- Scrapes https://www.scholarships.govt.nz
+- Filters physics and science PhD scholarships open to Nepali students
+- Returns: name, amount NZD, eligibility, deadline, URL
+
+scrapers/macdiarmidinst_scraper.py:
+- Scrapes https://www.macdiarmid.ac.nz/opportunities/
+- Gets all current PhD opportunities at MacDiarmid nodes
+- Returns: project title, node university, supervisor, stipend NZD, field, URL
+- MacDiarmid focuses on: quantum materials, condensed matter, nanophysics
+
+scrapers/gns_scraper.py:
+- Scrapes GNS Science (https://www.gns.cri.nz) graduate opportunities
+- GNS strong in: geophysics, nuclear science, geochronology
+- Returns: project, field, supervisor, stipend, deadline, URL
+
+scrapers/manaaki_scraper.py:
+- Monitors nzscholarships.govt.nz for Manaaki NZ annual announcement
+- Returns: current year status (open/closed), deadline, document list
+- Sends alert when new cycle opens
+
+sync/sync_manager.py:
+- SyncManager class:
+    full_sync(fields)
+    delta_sync()
+    sync_macdiarmidinst()
+    sync_gns()
+    get_last_sync_time()
+    update_last_sync_time()
+    merge_results(old, new)
+
+sync/change_tracker.py:
+- Detects: new university, deadline changed, funding changed,
+  new MacDiarmid position, Manaaki NZ deadline announced
+- Saves diff to outputs/changes_log.json
+
+watchlist/watchlist_manager.py:
+- watchlist.json schema:
+  {
+    "watchlist": [
+      {
+        "university": "University of Auckland",
+        "field": "Quantum Mechanics",
+        "added_date": "",
+        "last_checked": "",
+        "deadline": "Rolling",
+        "funding_type": "Manaaki NZ | Doctoral Scholarship | MacDiarmid | Self",
+        "doctoral_stipend_nzd": 27500,
+        "macdiarmidinstitute_node": true,
+        "status": "Open | Closed | Unknown",
+        "notes": ""
+      }
+    ]
+  }
+
+alerts/deadline_checker.py:
+- Reads all_universities.json + manaaki_info.json
+- Creates GitHub Issues for deadlines within 30 days
+- Special high-priority alert for Manaaki NZ opening
+- Issue format: "⚠️ Deadline: University of Otago Quantum Optics | 🌟 Manaaki NZ Opens"
+
+agents/nz_agent.py:
+- Class: NZAgent
+- Method: search(field: str) -> dict
+- Search queries:
+    "{field} physics PhD New Zealand 2025 international scholarship"
+    "Manaaki New Zealand scholarship physics Nepal 2025"
+    "MacDiarmid Institute PhD {field} 2025"
+    "GNS Science graduate {field} physics"
+    "{field} physics PhD Auckland Canterbury Otago Wellington 2025"
+- Combines Tavily + all 4 scrapers
+- Claude processes and returns JSON
+
+prompts/nz_system_prompt.txt:
+- Instructs Claude to return ONLY valid JSON with schema:
+  {
+    "country": "New Zealand",
+    "field": "<field>",
+    "last_updated": "<date>",
+    "universities": [
+      {
+        "rank_order": 1,
+        "name": "",
+        "city": "",
+        "department_group": "",
+        "url": "",
+        "fields": [],
+        "admission": "Rolling | Semester-based",
+        "deadlines": {
+          "semester1_feb": "",
+          "semester2_jul": "",
+          "rolling": true
+        },
+        "international_tuition_nzd_per_year": 0,
+        "funding": {
+          "doctoral_scholarship_available": true,
+          "doctoral_stipend_nzd": 27500,
+          "manaaki_nz_eligible": true,
+          "macdiarmidinstitute_node": false,
+          "macdiarmidinstitute_stipend_nzd": 27000,
+          "university_specific_scholarships": []
+        },
+        "ielts_minimum": 6.5,
+        "required_documents": [],
+        "notable_supervisors": [
+          {"name": "", "research_area": "", "profile_url": ""}
+        ],
+        "watchlisted": false,
+        "last_updated": "",
+        "notes_for_nepali_students": ""
+      }
+    ],
+    "macdiarmidinstitute_positions": [
+      {
+        "title": "",
+        "node_university": "",
+        "field": "",
+        "stipend_nzd": 27000,
+        "deadline": "",
+        "url": ""
+      }
+    ],
+    "gns_positions": [
+      {
+        "title": "",
+        "field": "",
+        "stipend_nzd": 0,
+        "deadline": "",
+        "url": ""
+      }
+    ],
+    "scholarships": [
+      {
+        "name": "Manaaki NZ | Doctoral | MacDiarmid | Commonwealth",
+        "amount_nzd": 0,
+        "eligibility": "",
+        "deadline": "",
+        "url": "",
+        "nepal_specific_notes": ""
+      }
+    ]
+  }
+
+web/index.html:
+- Manaaki NZ Scholarship banner → manaaki_guide.html
+- Filter panel:
+    * Field dropdown (10 fields)
+    * Funding: Manaaki NZ / Doctoral / MacDiarmid / Any
+    * MacDiarmid node toggle
+    * City filter (Auckland, Wellington, Christchurch, Dunedin, Hamilton)
+    * Sort: stipend / deadline / name
+- University cards with MacDiarmid badge if applicable
+- GNS Science section
+- Sync button + last sync time
+
+web/manaaki_guide.html:
+- Complete Manaaki NZ Scholarships guide for Nepali students:
+  What is Manaaki NZ: NZ govt fully funded scholarship for developing countries
+  Step 1: Visit nzscholarships.govt.nz (opens ~March each year)
+  Step 2: Create account and start application
+  Step 3: Documents: passport, transcripts, degree certificate,
+          IELTS (min 6.5), CV, personal statement, 2 referees,
+          leadership evidence, development impact statement
+  Step 4: Shortlisting and interview
+  Step 5: Award notification
+  Step 6: University enrollment and visa processing
+- NZ High Commission Nepal contact: Kathmandu
+- Stipend breakdown in NZD and approximate NPR
+- Tips: emphasize how PhD will contribute to Nepal's development
+- Comparison with Australia Awards
+- FAQ
+
+web/live_positions.html:
+- MacDiarmid Institute positions (updated weekly)
+- GNS Science positions
+- University advertised positions
+- Filter by field, city, stipend range
+
+web/watchlist.html:
+- Watchlisted universities with:
+  - Doctoral stipend in NZD
+  - MacDiarmid node badge
+  - Rolling deadline indicator
+  - Direct apply link
+  - Notes field
+
+.github/workflows/run_agent.yml:
+- Cron: Monday 08:00 UTC
+- Steps: checkout, python 3.11, pip install -r requirements.txt,
+  python app.py --all-fields --sync,
+  git config, git add outputs/, git commit, git push
+- Secrets: ANTHROPIC_API_KEY, TAVILY_API_KEY, GITHUB_TOKEN
+
+.github/workflows/deadline_alert.yml:
+- Cron: daily 06:00 UTC
+- Runs: python -m alerts.deadline_checker
+- Special monitor: nzscholarships.govt.nz for Manaaki announcement
+
+.github/workflows/manual_sync.yml:
+- workflow_dispatch with inputs:
+    field: string (optional)
+    sync_type: choice (full / delta / macdiarmidinst / gns)
+
+config/settings.py:
+- ANTHROPIC_API_KEY, TAVILY_API_KEY from .env
+- SUPPORTED_FIELDS = [10 physics fields]
+- NZ_UNIVERSITIES = [list of all 8]
+- MACDIARMIDINSTITUTE_NODES = [list of 6 node universities]
+- OUTPUT_DIR, WEB_DIR
+- MODEL = "claude-sonnet-4-6"
+- DOCTORAL_STIPEND_NZD_2025 = 27500
+- GITHUB_TOKEN
+
+README.md:
+1. Project title and description
+2. What this agent covers:
+   - All NZ universities with physics departments (8 total)
+   - MacDiarmid Institute PhD positions (premium condensed matter/quantum)
+   - GNS Science graduate positions (geophysics/nuclear)
+   - Manaaki NZ Scholarships (most important for Nepali students)
+   - University doctoral scholarships
+3. Features:
+   - All universities (no limit)
+   - Weekly auto sync
+   - Delta sync
+   - Watchlist with deadline tracking
+   - Deadline alerts via GitHub Issues
+   - Change tracker
+   - Live positions page
+   - GitHub Pages web UI
+4. Setup:
+   a. git clone https://github.com/yourusername/newzealand-phd-agent
+   b. cd newzealand-phd-agent
+   c. pip install -r requirements.txt
+   d. cp .env.example .env
+   e. Add ANTHROPIC_API_KEY and TAVILY_API_KEY to .env
+   f. python app.py --field "Quantum Mechanics"
+5. CLI usage with all flags
+6. Watchlist guide
+7. GitHub Actions setup (secrets)
+8. GitHub Pages setup
+9. Manaaki NZ Scholarship guide for Nepali students
+10. MacDiarmid Institute explanation
+11. API keys guide (Tavily + Anthropic)
+12. MIT License
+
+requirements.txt:
+anthropic
+tavily-python
+python-dotenv
+rich
+requests
+beautifulsoup4
+PyGithub
+
+Build every single file with complete working code. No placeholders.
+No comments saying "add logic here". Every function must be implemented.
